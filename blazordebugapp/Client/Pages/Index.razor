@@ -1,0 +1,151 @@
+﻿@page "/"
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using blazordebugapp.Shared.Constants
+@using blazordebugapp.Shared.Routes
+@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAuthorizationService AuthorizationService
+@inject IWebAssemblyHostEnvironment HostEnvironment
+@inject HttpClient HttpClientService
+@inject IConfiguration Configuration
+
+<PageTitle>Index</PageTitle>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+<SurveyPrompt Title="How is Blazor working for you?" />
+
+<h3>ClaimsPrincipal Data</h3>
+
+<button @onclick="GetClaimsPrincipalData">Get ClaimsPrincipal Data</button>
+
+<p>@authMessage</p>
+
+@if (claims.Count() > 0)
+{
+    <ul>
+        @foreach (var claim in claims)
+        {
+            <li>@claim.Type: @claim.Value</li>
+        }
+    </ul>
+}
+
+<p>@surnameMessage</p>
+
+<AuthorizeView Roles=@(RoleTypes.Admin)>
+    <Authorized>
+        You have Admin privileges.
+        <button @onclick="TestUserIsOwner">Manager</button>
+        <p>Manager Details: @managerDetails</p>
+    </Authorized>
+    <NotAuthorized>
+        You do not have Admin privileges.
+        <p>Error Message: @errorDetails</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+<AuthorizeView Roles=@(RoleTypes.Owner)>
+    <Authorized>
+        You have Owner privileges.
+        <p>Current Environment: @HostEnvironment.Environment</p>
+        <p>Manager Details: @managerDetails</p>
+    </Authorized>
+    <NotAuthorized>
+        You do not have Owner privileges.
+        <p>Error Message: @errorDetails</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    private string authMessage;
+    private string surnameMessage;
+    private IEnumerable<Claim> claims = Enumerable.Empty<Claim>();
+    private string managerDetails;
+    private string errorDetails;
+
+    private async Task GetClaimsPrincipalData()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            authMessage = $"{user.Identity.Name} is authenticated.";
+            claims = user.Claims;
+            surnameMessage = 
+                $"Surname: {user.FindFirst(c => c.Type == ClaimTypes.Surname)?.Value}";
+        }
+        else
+        {
+            authMessage = "The user is NOT authenticated.";
+        }
+    }
+
+    private async Task TestUserIsOwner(MouseEventArgs mouseEventArgs)
+    {
+        var user = (await authenticationStateTask).User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            // Perform an action only available to authenticated (signed-in) users.
+            managerDetails = "You do not have sufficient privileges. Get owner privileges to get manager details.";
+        }
+
+        if (user.IsInRole("admin"))
+        {
+            // Perform an action only available to users in the 'admin' role.
+            managerDetails = "You only have Admin privileges. Get owner privileges to get manager details.";
+        }
+
+        if (user.IsInRole(RoleTypes.Owner))
+        {
+            // Perform an action only available to users in the 'Owner' role.
+            await GetManagerDetailsAsync();
+        }
+
+        try{
+            if ((await AuthorizationService.AuthorizeAsync(user, "content-editor"))
+            .Succeeded)
+            {
+                // Perform an action only available to users satisfying the
+                // 'content-editor' policy.
+                await GetManagerDetailsAsync();
+            }
+            else
+            {
+                errorDetails = "You do not have owner privileges. Get owner privileges to get manager details.";
+            }
+        }
+        catch(Exception ex)
+        {
+            errorDetails = ex.Message;
+        }
+    }
+
+    private async Task GetManagerDetailsAsync()
+    {
+        try
+        {
+            var response = await HttpClientService.GetAsync(ServerRoutes.AdminApi.GetManagerUri);
+
+            managerDetails = await response.Content.ReadAsStringAsync();
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch(Exception ex)
+        {
+            errorDetails = ex.Message;
+        }
+    }
+}
