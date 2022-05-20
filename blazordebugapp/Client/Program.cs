@@ -2,12 +2,13 @@ using blazordebugapp.Client;
 using blazordebugapp.Client.Services;
 using blazordebugapp.Shared.Interfaces;
 using blazordebugapp.Shared.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
-namespace Company.WebApplication1
+namespace blazordebugapp.Client
 {
     public class Program
     {
@@ -39,10 +40,16 @@ namespace Company.WebApplication1
             });
 
             builder.Services.AddScoped<IIdentityService, AzureAdIdentityService>();
-            builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
             builder.Services.AddTransient<IUserManagerRepository, UserRoleService>();
+            ConfigureCommonServices(builder.Services);
 
             await builder.Build().RunAsync();
+        }
+
+        public static void ConfigureCommonServices(IServiceCollection services)
+        {
+            // services.AddTransient<IClaimsTransformation, CustomClaimsProvider>();
+            services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
         }
     }
 }

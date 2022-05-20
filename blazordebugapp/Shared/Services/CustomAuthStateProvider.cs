@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
@@ -34,12 +35,12 @@ namespace blazordebugapp.Shared.Services
 
                 return (new AuthenticationState(currentuser));
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // log error details if needed
+                Console.WriteLine("Exception at CustomAuthStateProvider.GetAuthenticationStateAsync, message: {0}", ex.Message);
+                Debug.WriteLine("Exception at CustomAuthStateProvider.GetAuthenticationStateAsync, message: {0}", ex.Message);
+                throw;
             }
-
-            return null;
         }
     }
 }

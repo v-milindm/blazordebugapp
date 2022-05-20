@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Graph;
 using Microsoft.Identity.Web;
+using System.Diagnostics;
 
 namespace blazordebugapp.Server.Controllers
 {
@@ -53,12 +54,12 @@ namespace blazordebugapp.Server.Controllers
 
                 return newUser;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // log error details if needed
+                Console.WriteLine("Exception at GetAuthUser, message: {0}", ex.Message);
+                Debug.WriteLine("Exception at GetAuthUser, message: {0}", ex.Message);
+                throw;
             }
-
-            return null;
         }
 
         [Authorize(Roles = RoleTypes.Owner)]

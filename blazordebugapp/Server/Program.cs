@@ -6,11 +6,14 @@ using blazordebugapp.Shared.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Graph;
 using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.UI;
 
-namespace Company.WebApplication1
+namespace blazordebugapp.Server
 {
     public class Program
     {
@@ -37,7 +40,6 @@ namespace Company.WebApplication1
                        .AddDistributedTokenCaches();
 
             builder.Services.AddControllersWithViews();
-            builder.Services.AddRazorPages();
 
             builder.Services.AddAuthorization(options =>
             {
@@ -45,15 +47,17 @@ namespace Company.WebApplication1
                 options.FallbackPolicy = options.DefaultPolicy;
             });
 
+            builder.Services.AddRazorPages();
+            builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
+            builder.Services.AddScoped<SignOutSessionStateManager>();
             // Add consent handler
             builder.Services.AddServerSideBlazor()
                 .AddMicrosoftIdentityConsentHandler();
 
             // user claim / identity helper services
             builder.Services.AddScoped<IIdentityService, AzureAdIdentityService>();
-            builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
-
             builder.Services.AddTransient<IUserManagerRepository, UserManagerRepository>();
+            Client.Program.ConfigureCommonServices(builder.Services);
 
             var app = builder.Build();
 
@@ -79,7 +83,6 @@ namespace Company.WebApplication1
             app.UseAuthentication();
             app.UseAuthorization();
 
-
             app.MapRazorPages();
             app.MapControllers();
             // app.MapFallbackToFile("index.html");
@@ -92,44 +95,39 @@ namespace Company.WebApplication1
         {
             if (context.Principal.Identity.IsAuthenticated)
             {
-                // authentication services
-                var graphScopes = builder.Configuration.GetValue<string>("DownstreamApi:Scopes")?.Split(' ');
-
-                var tokenAcquisition = context.HttpContext.RequestServices
-             .GetRequiredService<ITokenAcquisition>();
-
-                var graphClient = new GraphServiceClient(
-                    new DelegateAuthenticationProvider(async (request) =>
-                    {
-                        var token = await tokenAcquisition
-                            .GetAccessTokenForUserAsync(graphScopes, user: context.Principal);
-                        request.Headers.Authorization =
-                            new AuthenticationHeaderValue("Bearer", token);
-                    })
-                );
-
-                // create a new custom identity item (it is not getting populated via DI)
-                AzureAdIdentityService identity = new AzureAdIdentityService(context.Principal);
-
                 var serviceProvider = builder.Services.BuildServiceProvider();
+                var currentIdentity = serviceProvider.GetService<IIdentityService>();
+                // create a new custom identity item (it is not getting populated via DI)
+                currentIdentity = new AzureAdIdentityService(context.Principal);
                 var userRolesService = serviceProvider.GetService<IUserManagerRepository>();
 
                 // find the user in the admin roles container
-                var userRoleData = await userRolesService.GetAccessInformationByEmailAsync(identity.GetEmail());
+                var userRoleData = await userRolesService.GetAccessInformationByEmailAsync(currentIdentity.GetEmail());
 
                 if (userRoleData?.Roles?.Count > 0)
                 {
                     // build the role claims
                     foreach (var role in userRoleData.Roles)
                     {
-                        ((ClaimsIdentity)identity.UserPrincipal.Identity)
-                            .AddClaim(new Claim(ClaimTypes.Role, role.RoleName));
+                        ClaimsIdentity principal = (ClaimsIdentity)currentIdentity.UserPrincipal.Identity;
+
+                        var claimType = ClaimTypes.Role;
+                        var claimValue = role.RoleName;
+
+                        if (!principal.HasClaim(claim => claim.Type == claimType && claim.Value == claimValue))
+                        {
+                            principal.AddClaim(new Claim(claimType, claimValue));
+                        }
                     }
                 }
             }
+            else
+            {
+                throw new Exception("Not authenticated");
+            }
 
             // Custom code here
-            await Task.CompletedTask.ConfigureAwait(false);
+            await Task.CompletedTask;
         }
     }
 }

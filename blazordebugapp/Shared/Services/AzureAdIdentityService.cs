@@ -17,10 +17,6 @@ namespace blazordebugapp.Shared.Services
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public AzureAdIdentityService()
-        {
-        }
-
         public AzureAdIdentityService(IHttpContextAccessor httpContextAccessor)
         {
             _httpContextAccessor = httpContextAccessor;

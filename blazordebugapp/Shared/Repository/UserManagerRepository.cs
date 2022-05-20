@@ -65,8 +65,15 @@ namespace blazordebugapp.Shared.Repository
                 // build the role claims
                 foreach (var role in userRoleData.Roles)
                 {
-                    ((ClaimsIdentity)currentUser.Identity)
-                        .AddClaim(new Claim(ClaimTypes.Role, role.RoleName));
+                    ClaimsIdentity principal = (ClaimsIdentity)currentUser.Identity;
+
+                    var claimType = ClaimTypes.Role;
+                    var claimValue = role.RoleName;
+
+                    if (!principal.HasClaim(claim => claim.Type == claimType && claim.Value == claimValue))
+                    {
+                        principal.AddClaim(new Claim(claimType, claimValue));
+                    }
                 }
             }
 

@@ -2,6 +2,7 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using blazordebugapp.Client.Authorization
 @using blazordebugapp.Shared.Constants
 @using blazordebugapp.Shared.Routes
 @using Microsoft.AspNetCore.Components.WebAssembly.Hosting
@@ -37,7 +38,7 @@ Welcome to your new app.
 
 <p>@surnameMessage</p>
 
-<AuthorizeView Roles=@(RoleTypes.Admin)>
+<CustomAuthorizeView Roles=@(RoleTypes.Admin)>
     <Authorized>
         You have Admin privileges.
         <button @onclick="TestUserIsOwner">Manager</button>
@@ -47,7 +48,7 @@ Welcome to your new app.
         You do not have Admin privileges.
         <p>Error Message: @errorDetails</p>
     </NotAuthorized>
-</AuthorizeView>
+</CustomAuthorizeView>
 
 <AuthorizeView Roles=@(RoleTypes.Owner)>
     <Authorized>
@@ -100,7 +101,7 @@ Welcome to your new app.
             managerDetails = "You do not have sufficient privileges. Get owner privileges to get manager details.";
         }
 
-        if (user.IsInRole("admin"))
+        if (user.IsInRole(RoleTypes.Admin))
         {
             // Perform an action only available to users in the 'admin' role.
             managerDetails = "You only have Admin privileges. Get owner privileges to get manager details.";
