@@ -1,6 +1,5 @@
 ﻿@page "/fetchdata"
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using blazordebugapp.Shared
 @attribute [Authorize]
 @inject HttpClient Http
@@ -49,9 +48,9 @@ else
         {
             forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("WeatherForecast");
         }
-        catch (AccessTokenNotAvailableException exception)
+        catch (Exception exception)
         {
-            exception.Redirect();
+            forecasts = null;
         }
     }
 }

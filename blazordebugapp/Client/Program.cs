@@ -2,10 +2,8 @@ using blazordebugapp.Client;
 using blazordebugapp.Client.Services;
 using blazordebugapp.Shared.Interfaces;
 using blazordebugapp.Shared.Services;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
 namespace blazordebugapp.Client
@@ -29,15 +27,15 @@ namespace blazordebugapp.Client
             // Supply HttpClient instances that include access tokens when making requests to the server project
             //builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("blazordebugapp.ServerAPI"));
 
-            builder.Services.AddMsalAuthentication(options =>
-            {
-                builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
+            //builder.Services.AddMsalAuthentication(options =>
+            //{
+            //    builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
 
-                options.ProviderOptions.LoginMode = "redirect";
-                options.ProviderOptions.DefaultAccessTokenScopes.Add("https://graph.microsoft.com/User.Read");
-                options.ProviderOptions.DefaultAccessTokenScopes.Add("https://graph.microsoft.com/User.ReadBasic.All");
-                options.ProviderOptions.DefaultAccessTokenScopes.Add("api://api.id.uri/access_as_user");
-            });
+            //    options.ProviderOptions.LoginMode = "redirect";
+            //    options.ProviderOptions.DefaultAccessTokenScopes.Add("https://graph.microsoft.com/User.Read");
+            //    options.ProviderOptions.DefaultAccessTokenScopes.Add("https://graph.microsoft.com/User.ReadBasic.All");
+            //    options.ProviderOptions.DefaultAccessTokenScopes.Add("api://api.id.uri/access_as_user");
+            //});
 
             builder.Services.AddScoped<IIdentityService, AzureAdIdentityService>();
             builder.Services.AddTransient<IUserManagerRepository, UserRoleService>();

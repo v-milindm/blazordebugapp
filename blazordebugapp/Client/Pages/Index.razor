@@ -1,7 +1,6 @@
 ﻿@page "/"
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using blazordebugapp.Client.Authorization
 @using blazordebugapp.Shared.Constants
 @using blazordebugapp.Shared.Routes
@@ -139,10 +138,6 @@ Welcome to your new app.
             var response = await HttpClientService.GetAsync(ServerRoutes.AdminApi.GetManagerUri);
 
             managerDetails = await response.Content.ReadAsStringAsync();
-        }
-        catch (AccessTokenNotAvailableException exception)
-        {
-            exception.Redirect();
         }
         catch(Exception ex)
         {

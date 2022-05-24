@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
-using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Graph;
 using Microsoft.Identity.Web;
@@ -48,8 +47,6 @@ namespace blazordebugapp.Server
             });
 
             builder.Services.AddRazorPages();
-            builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
-            builder.Services.AddScoped<SignOutSessionStateManager>();
             // Add consent handler
             builder.Services.AddServerSideBlazor()
                 .AddMicrosoftIdentityConsentHandler();
@@ -97,7 +94,6 @@ namespace blazordebugapp.Server
             {
                 var serviceProvider = builder.Services.BuildServiceProvider();
                 var currentIdentity = serviceProvider.GetService<IIdentityService>();
-                // create a new custom identity item (it is not getting populated via DI)
                 currentIdentity = new AzureAdIdentityService(context.Principal);
                 var userRolesService = serviceProvider.GetService<IUserManagerRepository>();
 
