@@ -19,14 +19,17 @@ namespace blazordebugapp.Server.Controllers
         private readonly IUserManagerRepository userManagerRepo;
         private readonly IIdentityService userIdentity;
         private readonly GraphServiceClient graphServiceClient;
+        private readonly ILogger logger;
 
         public AdminController(IUserManagerRepository userManagerRepo,
             IIdentityService userRepo,
-            GraphServiceClient graphServiceClient)
+            GraphServiceClient graphServiceClient,
+            ILogger<AdminController> logger)
         {
             this.userManagerRepo = userManagerRepo;
             this.userIdentity = userRepo;
             this.graphServiceClient = graphServiceClient;
+            this.logger = logger;
         }
 
         /// <summary>
@@ -45,19 +48,28 @@ namespace blazordebugapp.Server.Controllers
                 {
                     IsAuthenticated = this.userIdentity.IsAuthenticated(),
                     UserName = this.userIdentity.GetName(),
-                    Claims = new System.Collections.Generic.List<Tuple<string, string>>()
+                    Claims = new()
                 };
+
+                if(newUser == null || !newUser.IsAuthenticated)
+                {
+                    throw new InvalidOperationException("Current user returned null data or was not authenticated from server.");
+                }
+
                 foreach (var claim in this.userIdentity.UserPrincipal.Claims)
                 {
-                    newUser.Claims.Add(new Tuple<string, string>(claim.Type, claim.Value));
+                    newUser.Claims.Add(new() { ClaimType = claim.Type, ClaimValue = claim.Value });
                 }
 
                 return newUser;
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception at GetAuthUser, message: {0}", ex.Message);
-                Debug.WriteLine("Exception at GetAuthUser, message: {0}", ex.Message);
+                string errorMessage = string.Format("Exception at AdminController.GetAuthUser, message: {0}, stack: {1}", ex.Message, ex.StackTrace);
+
+                Console.WriteLine(errorMessage);
+                Debug.WriteLine(errorMessage);
+                logger.LogError(errorMessage);
                 throw;
             }
         }
@@ -93,7 +105,7 @@ namespace blazordebugapp.Server.Controllers
                 // if we get challenge exception, then we want an error
                 // message to be show in ui HasError = true;
 
-                dynamic graphErrorUser = new
+                var graphErrorUser = new
                 {
                     HasError = false,
                     ErrorMessage = $"{graphEx.Message} {graphEx.InnerException} {graphEx.StackTrace}"
@@ -101,7 +113,11 @@ namespace blazordebugapp.Server.Controllers
 
                 if (graphEx.InnerException is MicrosoftIdentityWebChallengeUserException)
                 {
-                    graphErrorUser.HasError = true;
+                    graphErrorUser = new
+                    {
+                        HasError = true,
+                        ErrorMessage = $"{graphEx.Message} {graphEx.InnerException} {graphEx.StackTrace}"
+                    };
                 }
 
                 return Ok(graphErrorUser);

@@ -2,6 +2,7 @@
 using blazordebugapp.Shared.Interfaces;
 using blazordebugapp.Shared.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,10 +18,12 @@ namespace blazordebugapp.Shared.Repository
     public class UserManagerRepository : IUserManagerRepository
     {
         private readonly IIdentityService identityService;
+        private readonly ILogger logger;
 
-        public UserManagerRepository(IIdentityService identityService)
+        public UserManagerRepository(IIdentityService identityService, ILogger<UserManagerRepository> logger)
         {
             this.identityService = identityService;
+            this.logger = logger;
         }
 
         public Task<RoleBasedAccessModel> AddNewUserAccessAsync(RoleBasedAccessModel newUser)
@@ -57,6 +60,12 @@ namespace blazordebugapp.Shared.Repository
         public async Task<ClaimsPrincipal> GetAuthUser()
         {
             var currentUser = this.identityService.UserPrincipal;
+            
+            if(currentUser == null)
+            {
+                throw new ArgumentNullException(nameof(currentUser), "Current user returned null from Identity Service at UserManagerRepository.GetAuthUser() method.");
+            }
+
             var userRoleData = await this.GetAccessInformationByEmailAsync(this.identityService.GetEmail());
             userRoleData.UserFullName = identityService.GetName();
 

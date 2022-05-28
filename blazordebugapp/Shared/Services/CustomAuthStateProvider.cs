@@ -1,5 +1,6 @@
 ﻿using blazordebugapp.Shared.Interfaces;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,10 +14,12 @@ namespace blazordebugapp.Shared.Services
     public class CustomAuthStateProvider : AuthenticationStateProvider
     {
         private readonly IUserManagerRepository userRepo;
+        private readonly ILogger logger;
         ClaimsPrincipal currentuser = null;
-        public CustomAuthStateProvider(IUserManagerRepository userRepo)
+        public CustomAuthStateProvider(IUserManagerRepository userRepo, ILogger<CustomAuthStateProvider> logger)
         {
             this.userRepo = userRepo;
+            this.logger = logger;
         }
 
         /// <summary>
@@ -31,14 +34,22 @@ namespace blazordebugapp.Shared.Services
                 if (currentuser == null)
                 {
                     currentuser = await this.userRepo.GetAuthUser();
+
+                    if (currentuser == null)
+                    {
+                        throw new ArgumentNullException(nameof(currentuser), "Current user returned null from user service.");
+                    }
                 }
 
                 return (new AuthenticationState(currentuser));
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception at CustomAuthStateProvider.GetAuthenticationStateAsync, message: {0}", ex.Message);
-                Debug.WriteLine("Exception at CustomAuthStateProvider.GetAuthenticationStateAsync, message: {0}", ex.Message);
+                string errorMessage = string.Format("Exception at CustomAuthStateProvider.GetAuthenticationStateAsync, message: {0}, stack: {1}", ex.Message, ex.StackTrace);
+
+                Console.WriteLine(errorMessage);
+                Debug.WriteLine(errorMessage);
+                logger.LogError(errorMessage);
                 throw;
             }
         }

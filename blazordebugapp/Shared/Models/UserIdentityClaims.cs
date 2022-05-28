@@ -14,6 +14,12 @@ namespace blazordebugapp.Shared.Models
     {
         public bool IsAuthenticated { get; set; }
         public string UserName { get; set; }
-        public List<Tuple<string, string>> Claims { get; set; }
+        public List<ClaimsData> Claims { get; set; }
+    }
+
+    public class ClaimsData
+    {
+        public string ClaimType { get; set; }
+        public string ClaimValue { get; set; }
     }
 }

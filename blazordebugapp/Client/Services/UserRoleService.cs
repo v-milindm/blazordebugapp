@@ -1,6 +1,7 @@
 ﻿using blazordebugapp.Shared.Interfaces;
 using blazordebugapp.Shared.Models;
 using blazordebugapp.Shared.Routes;
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Security.Claims;
 
@@ -9,10 +10,12 @@ namespace blazordebugapp.Client.Services
     public class UserRoleService : IUserManagerRepository
     {
         private readonly HttpClient httpClient;
+        private readonly ILogger logger;
 
-        public UserRoleService(HttpClient httpClient)
+        public UserRoleService(HttpClient httpClient, ILogger<UserRoleService> logger)
         {
             this.httpClient = httpClient;
+            this.logger = logger;
         }
 
         public Task<RoleBasedAccessModel> AddNewUserAccessAsync(RoleBasedAccessModel newUser)
@@ -39,22 +42,40 @@ namespace blazordebugapp.Client.Services
         {
             try
             {
-                var retServerAuthUser = await this.httpClient.GetFromJsonAsync<UserIdentityClaims>(ServerRoutes.AdminApi.GetUser);
+                var serverResponse = await this.httpClient.GetAsync(ServerRoutes.AdminApi.GetUser);
+                String responseContent = await serverResponse.Content.ReadAsStringAsync();
 
-                var claims = new[] { new Claim(ClaimTypes.Name, retServerAuthUser.UserName) }
-                .Concat(retServerAuthUser.Claims.Select(c => new Claim(c.Item1, c.Item2)));
+                if (serverResponse.IsSuccessStatusCode && serverResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    var retServerAuthUser = Newtonsoft.Json.JsonConvert.DeserializeObject<UserIdentityClaims>(responseContent);
 
-                var identity = new ClaimsIdentity(claims, "Server authentication");
-                var user = new ClaimsPrincipal(identity);
+                    if (retServerAuthUser == null)
+                    {
+                        throw new ArgumentNullException(nameof(retServerAuthUser), "Current user returned null from server.");
+                    }
 
-                return user;
+                    var claims = new[] { new Claim(ClaimTypes.Name, retServerAuthUser.UserName) }
+                    .Concat(retServerAuthUser.Claims.Select(c => new Claim(c.ClaimType, c.ClaimValue)));
+
+                    var identity = new ClaimsIdentity(claims, "Server authentication");
+                    var user = new ClaimsPrincipal(identity);
+
+                    return user;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Response indicates that server did not return the authenticated user information. Error Message: {responseContent}");
+                }
             }
-            catch
+            catch(Exception ex)
             {
-                // log error details if needed
-            }
+                string errorMessage = string.Format("Exception at UserRoleService.GetAuthUser, message: {0}, stack: {1}", ex.Message, ex.StackTrace);
 
-            return null;
+                Console.WriteLine(errorMessage);
+                Debug.WriteLine(errorMessage);
+                logger.LogError(errorMessage);
+                throw;
+            }
         }
 
         public Task<RoleBasedAccessModel> UpdateUserRolesAccessAsync(RoleBasedAccessModel updateUser)
